@@ -19,13 +19,20 @@
     #result-box{display:none;margin-top:20px;background:#E1F5EE;padding:16px;border-radius:8px}
     #loading-box{display:none;margin-top:20px;background:#f5f5f5;padding:20px;border-radius:8px;text-align:center}
     #loading-text{font-size:15px;color:#555;margin:0}
-    pre{white-space:pre-wrap;background:#f5f5f5;padding:16px;border-radius:6px;font-size:13px;max-height:500px;overflow-y:auto}
+    #article-display{background:#f5f5f5;padding:16px;border-radius:6px;font-size:14px;max-height:600px;overflow-y:auto;line-height:1.6}
     .cost{background:#EBF5FB;padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
     .seo{background:#E1F5EE;padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
     .eeat{background:#F3E8FF;padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
     .unique{background:#FFF3CD;padding:10px;border-radius:6px;margin:10px 0;font-size:13px}
     a{color:#0F6E56;font-weight:bold}
     label{font-size:13px;font-weight:500;color:#333;margin-top:8px;display:block}
+    table{border-collapse:collapse;width:100%;margin-top:10px;font-size:13px}
+    th{background:#1F4E79;color:white;padding:8px;text-align:left}
+    td{padding:8px;border:1px solid #ccc;vertical-align:top}
+    tr:nth-child(even){background:#f9f9f9}
+    #summary-table{margin:10px 0}
+    .section-divider{border:none;border-top:1px solid #eee;margin:15px 0}
+    .optional-label{color:#888;font-weight:normal;font-size:12px;margin-left:4px}
   </style>
 </head>
 <body>
@@ -36,7 +43,7 @@
   <h3>Step 1 - Start a New Article</h3>
   <label>Target Keyword (required)</label>
   <input id="keyword" type="text" placeholder="e.g. best trail running shoes for flat feet"/>
-  <label>Content Topic Ideas / Notes (optional)</label>
+  <label>Content Topic Ideas / Notes <span class="optional-label">(optional)</span></label>
   <textarea id="operator_topic_notes" placeholder="e.g. focus on budget options under $150, target beginners"></textarea>
   <label>Target Country</label>
   <select id="target_country">
@@ -47,6 +54,19 @@
     <option value="ca">Canada</option>
     <option value="lk">Sri Lanka</option>
   </select>
+  <label>English Variety</label>
+  <select id="english_variety">
+    <option value="American">American English</option>
+    <option value="British">British English</option>
+    <option value="Australian">Australian English</option>
+    <option value="Canadian">Canadian English</option>
+  </select>
+  <hr class="section-divider">
+  <label>Internal Link 1 URL <span class="optional-label">(optional)</span></label>
+  <input id="internal_link_1" type="text" placeholder="e.g. https://yoursite.com/related-article"/>
+  <label>Internal Link 2 URL <span class="optional-label">(optional)</span></label>
+  <input id="internal_link_2" type="text" placeholder="e.g. https://yoursite.com/another-article"/>
+  <hr class="section-divider">
   <button class="submit" onclick="submitKeyword()">Research and Generate Article</button>
 </div>
 
@@ -60,8 +80,10 @@
   <div class="cost" id="cost-display"></div>
   <div class="seo" id="seo-display"></div>
   <div class="eeat" id="eeat-display"></div>
+  <h3>Article Summary</h3>
+  <div id="summary-table"></div>
   <h3>Article</h3>
-  <pre id="article-display"></pre>
+  <div id="article-display"></div>
   <h3>Step 3 - Human Review</h3>
   <p>Read the article and review all scores above. Is it acceptable to publish?</p>
   <button class="approve" onclick="showApprove()">Approve and Save to Google Docs</button>
@@ -89,12 +111,15 @@
 </div>
 
 <script>
-  const WEBHOOK_URL = 'https://sharmini99.app.n8n.cloud/webhook/46f643b2-94e4-4361-9966-06a61fed2d66';
+  const WEBHOOK_URL = 'https://sharmini0305.app.n8n.cloud/webhook-test/46f643b2-94e4-4361-9966-06a61fed2d66';
 
   let currentData    = {};
   let currentKeyword = '';
   let currentNotes   = '';
   let currentCountry = 'us';
+  let currentEnglish = 'American';
+  let currentLink1   = '';
+  let currentLink2   = '';
 
   function showLoading(message) {
     document.getElementById('step1-box').style.display   = 'none';
@@ -113,12 +138,18 @@
     const keyword = document.getElementById('keyword').value.trim();
     const notes   = document.getElementById('operator_topic_notes').value.trim();
     const country = document.getElementById('target_country').value;
+    const english = document.getElementById('english_variety').value;
+    const link1   = document.getElementById('internal_link_1').value.trim();
+    const link2   = document.getElementById('internal_link_2').value.trim();
 
     if (!keyword) { alert('Please enter a keyword first'); return; }
 
     currentKeyword = keyword;
     currentNotes   = notes;
     currentCountry = country;
+    currentEnglish = english;
+    currentLink1   = link1;
+    currentLink2   = link2;
 
     showLoading('Running full pipeline... this takes 3-5 minutes');
 
@@ -130,7 +161,10 @@
           action:               'generate',
           keyword:              keyword,
           operator_topic_notes: notes,
-          target_country:       country
+          target_country:       country,
+          english_variety:      english,
+          internal_link_1:      link1,
+          internal_link_2:      link2
         })
       });
 
@@ -189,7 +223,22 @@
       ' | Authority: ' + (eeat.authoritativeness || 0) +
       ' | Trust: ' + (eeat.trustworthiness || 0);
 
-    document.getElementById('article-display').innerText = item.article || '';
+    const contentGaps = (item.content_gaps || '').substring(0, 300) + '...';
+    document.getElementById('summary-table').innerHTML = `
+      <table>
+        <tr><th>Field</th><th>Value</th></tr>
+        <tr><td><strong>Keyword</strong></td><td>${item.keyword || ''}</td></tr>
+        <tr><td><strong>Search Volume</strong></td><td>${item.search_volume || ''}</td></tr>
+        <tr><td><strong>Keyword Difficulty</strong></td><td>${item.keyword_difficulty || ''}</td></tr>
+        <tr><td><strong>Secondary Keywords</strong></td><td>${item.secondary_keywords || ''}</td></tr>
+        <tr><td><strong>Unique Factor</strong></td><td>${item.unique_factor || ''}</td></tr>
+        <tr><td><strong>Content Gaps</strong></td><td>${contentGaps}</td></tr>
+        <tr><td><strong>E-E-A-T Overall</strong></td><td>${(item.eeat_score || {}).overall || ''}/10</td></tr>
+        <tr><td><strong>Total Cost</strong></td><td>${item.article_cost || ''}</td></tr>
+      </table>
+    `;
+
+    document.getElementById('article-display').innerHTML = item.article || '';
   }
 
   function showApprove() {
@@ -209,14 +258,19 @@
   }
 
   function changeKeyword() {
-    document.getElementById('review-box').style.display  = 'none';
-    document.getElementById('article-box').style.display = 'none';
-    document.getElementById('keyword').value = '';
+    document.getElementById('review-box').style.display   = 'none';
+    document.getElementById('article-box').style.display  = 'none';
+    document.getElementById('keyword').value              = '';
     document.getElementById('operator_topic_notes').value = '';
-    document.getElementById('step1-box').style.display   = 'block';
+    document.getElementById('internal_link_1').value      = '';
+    document.getElementById('internal_link_2').value      = '';
+    document.getElementById('step1-box').style.display    = 'block';
     currentKeyword = '';
     currentNotes   = '';
     currentCountry = 'us';
+    currentEnglish = 'American';
+    currentLink1   = '';
+    currentLink2   = '';
     currentData    = {};
   }
 
@@ -258,6 +312,9 @@
           search_volume:         currentData.search_volume        || 0,
           keyword_difficulty:    currentData.keyword_difficulty   || 0,
           operator_topic_notes:  currentData.operator_topic_notes || '',
+          english_variety:       currentEnglish,
+          internal_link_1:       currentLink1,
+          internal_link_2:       currentLink2,
           seo_check:             currentData.seo_check            || {},
           eeat_score:            currentData.eeat_score           || {},
           article_cost:          currentData.article_cost         || '',
@@ -310,6 +367,9 @@
           search_volume:         currentData.search_volume        || 0,
           keyword_difficulty:    currentData.keyword_difficulty   || 0,
           operator_topic_notes:  currentData.operator_topic_notes || '',
+          english_variety:       currentEnglish,
+          internal_link_1:       currentLink1,
+          internal_link_2:       currentLink2,
           article:               currentData.article              || '',
           unique_factor:         currentData.unique_factor        || '',
           content_brief:         currentData.content_brief        || '',
@@ -366,6 +426,11 @@
           search_volume:         currentData.search_volume        || 0,
           keyword_difficulty:    currentData.keyword_difficulty   || 0,
           operator_topic_notes:  currentData.operator_topic_notes || '',
+          competitor_summary:    currentData.competitor_summary   || '',
+          internal_link_1:       currentLink1                     || '',
+          internal_link_2:       currentLink2                     || '',
+          internal_links_used:   currentData.internal_links_used  || '',
+          external_links_found:  currentData.external_links_found || '',
           seo_check:             currentData.seo_check            || {},
           eeat_score:            currentData.eeat_score           || {},
           article_cost:          currentData.article_cost         || '',
@@ -409,8 +474,10 @@
   }
 
   function startOver() {
-    document.getElementById('keyword').value = '';
+    document.getElementById('keyword').value              = '';
     document.getElementById('operator_topic_notes').value = '';
+    document.getElementById('internal_link_1').value      = '';
+    document.getElementById('internal_link_2').value      = '';
     document.getElementById('article-box').style.display  = 'none';
     document.getElementById('review-box').style.display   = 'none';
     document.getElementById('result-box').style.display   = 'none';
@@ -419,6 +486,9 @@
     currentKeyword = '';
     currentNotes   = '';
     currentCountry = 'us';
+    currentEnglish = 'American';
+    currentLink1   = '';
+    currentLink2   = '';
     currentData    = {};
   }
 </script>
